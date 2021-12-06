@@ -88,3 +88,53 @@
   (let [oxygen-rating (parse-to-decimal (first (find-value oxy-criteria input)))
         co2-rating (parse-to-decimal (first (find-value co2-criteria input)))]
     (* oxygen-rating co2-rating)))
+
+(defn parse-bingo-block [block]
+  (map
+   (fn [row]
+     (into [] (filter #(not (clojure.string/blank? %)) row)))
+   (map #(clojure.string/split % #" ") block)))
+
+(def geusses (clojure.string/split (first (split-file "resources/day4.input")) #","))
+
+(defn get-next-n-geusses [n]
+  (take n geusses))
+
+(def bingo-blocks (map #(parse-bingo-block %) (partition 5 (filter #(not (= "" %)) (rest (split-file "resources/day4.input"))))))
+
+(defn check-bingo [rows geusses]
+  (not (empty? (filter #(= 5 (count %)) (map #(set/intersection geusses %) (map #(into #{} %) rows))))))
+
+(defn is-matching-block? [block geusses]
+  (let [block-t (apply mapv vector block)
+        matching-rows (check-bingo block geusses)
+        matching-cols (check-bingo block-t geusses)]
+    (or matching-rows matching-cols)))
+
+(defn day4_1 []
+  (loop [cnt 5
+         c-geuss (get-next-n-geusses cnt)]
+    (let [geuss-as-set (into #{} c-geuss)
+          bingo-block (filter #(is-matching-block? % geuss-as-set) bingo-blocks)]
+      (if (not (empty? bingo-block))
+        (let [sum-non-matching-numbers (reduce + (map #(Integer. %) (set/difference (apply set/union (map #(into #{} %) (first bingo-block))) geuss-as-set)))]
+          (* sum-non-matching-numbers (Integer. (last c-geuss))))
+        (recur (inc cnt) (get-next-n-geusses (inc cnt)))))))
+
+(defn day4_2 []
+  (loop [cnt 5
+         c-geuss (get-next-n-geusses cnt)
+         prev-match-block '()]
+    (let [geuss-as-set (into #{} c-geuss)
+          bingo-block (filter #(is-matching-block? % geuss-as-set) bingo-blocks)]
+      (if (= (count bingo-block) (count bingo-blocks))
+        (let [prev-match-block-as-set (into #{} prev-match-block)
+              bingo-block-as-set (into #{} bingo-block)
+              new-bingo-block (set/difference bingo-block-as-set prev-match-block-as-set)
+              sum-non-matching-numbers
+              (reduce +
+                      (map #(Integer. %)
+                           (set/difference (apply set/union (map #(into #{} %)
+                                                                 (first new-bingo-block))) geuss-as-set)))]
+          (* sum-non-matching-numbers (Integer. (last c-geuss))))
+        (recur (inc cnt) (get-next-n-geusses (inc cnt)) bingo-block)))))
