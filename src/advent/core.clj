@@ -138,3 +138,44 @@
                                                                  (first new-bingo-block))) geuss-as-set)))]
           (* sum-non-matching-numbers (Integer. (last c-geuss))))
         (recur (inc cnt) (get-next-n-geusses (inc cnt)) bingo-block)))))
+
+(defn create-line-segment [coords]
+  (let [[[x1 y1] [x2 y2]] coords
+        [a b] (sort (list (Integer/parseInt x1) (Integer/parseInt x2)))
+        [c d] (sort (list (Integer/parseInt y1) (Integer/parseInt y2)))]
+    (for [xs (range a (inc b))
+          ys (range c (inc d))]
+      [xs ys])))
+
+(defn create-skew-line-segment [coords]
+  (let [[[x1 y1] [x2 y2]] coords
+        [a b] (sort (list (Integer/parseInt x1) (Integer/parseInt x2)))
+        [c d] (sort (list (Integer/parseInt y1) (Integer/parseInt y2)))]
+    (for [xs (range a (inc b))
+          ys (range c (inc d))
+          :when (= xs ys)]
+      [xs ys])))
+
+(defn parse-non-skew-lines [input-file]
+  (for [[a b]
+        (map #(clojure.string/split % #" -> ") (split-file input-file))
+        :let [[x1 y1] (clojure.string/split a #",")
+              [x2 y2] (clojure.string/split b #",")]
+        :when (or (= x1 x2) (= y1 y2))]
+    (list [x1 y1] [x2 y2])))
+
+(defn parse-skew-lines [input-file]
+  (for [[a b]
+        (map #(clojure.string/split % #" -> ") (split-file input-file))
+        :let [[x1 y1] (clojure.string/split a #",")
+              [x2 y2] (clojure.string/split b #",")]
+        :when (not (or (= x1 x2) (= y1 y2)))]
+    (list [x1 y1] [x2 y2])))
+
+(defn create-lines [lines]
+  (map #(create-line-segment %) lines))
+
+(defn day5_1 [input-file]
+  (count (filter #(> (val %) 1)
+                 (frequencies
+                  (mapcat identity (create-lines (parse-non-skew-lines input-file)))))))
